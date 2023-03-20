@@ -6,8 +6,8 @@ import numpy as np
 import gym
 import os
 
-api_key = 'KLLaP0MfU61QO8caliAreFWaGa20liBwPTbdacyQkeLYkdEEvViY1RShXtO72OGC'
-api_secret = '3M6FnR6HzFuTmETWWULNoEZkAe3GCajpTw0f7d76iQuxkFAp6KwHf6OIoLcmwVSY'
+api_key = ''
+api_secret = ''
 client = Client(api_key, api_secret)
 
 filename = 'btcusdt_2018_2020_1h.csv'
