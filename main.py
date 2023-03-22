@@ -33,7 +33,7 @@ df['upper_band'], df['middle_band'], df['lower_band'] = talib.BBANDS(df['close']
 class BinanceEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, data, window_size=60):
+    def __init__(self, data, window_size=80):
         super(BinanceEnv, self).__init__()
         self.data = data
         self.window_size = window_size
@@ -158,11 +158,11 @@ test_env = BinanceEnv(df)
 # Выполнение тестирования
 obs = test_env.reset()
 done = False
-df_equity = [] 
+df_equity = pd.DataFrame(columns=['Test Equity'])
 while not done:
     action, _ = model.predict(obs)
     obs, reward, done, info = test_env.step(action)
-    df_equity = df_equity.append({ 'Test Equity': test_env.equity}, ignore_index=True)
+    df_equity = pd.concat([df_equity, pd.DataFrame({'Test Equity': [test_env.equity]})], ignore_index=True)
     #print('Action:', action, 'Reward:', reward, 'Equity:', test_env.equity)
 
 
@@ -211,11 +211,11 @@ updated_test_env = BinanceEnv(updated_df)
 # Выполнение тестирования с обновленной моделью
 obs = updated_test_env.reset()
 done = False
-df_equity_updated = []
+df_equity_updated = pd.DataFrame(columns=['updated Equity'])
 while not done:
     action, _ = updated_model.predict(obs)
     obs, reward, done, info = updated_test_env.step(action)
-    df_equity_updated = df_equity_updated.append({ 'updated Equity': updated_test_env.equity}, ignore_index=True)
+    df_equity_updated = pd.concat([df_equity_updated, pd.DataFrame({'updated Equity': [updated_test_env.equity]})], ignore_index=True)
     #print('Action:', action, 'Reward:', reward, 'Equity:', updated_test_env.equity)
 
 
@@ -254,14 +254,15 @@ model = DQN.load('updated_binance_dqn_model')
 # Выполнение тестирования
 cumulative_profit = 0
 episode_rewards = []
-df_equity_last = []
+df_equity_last = pd.DataFrame(columns=['Last test Equity'])
+
 obs = test_env.reset()
 done = False
 while not done:
     action, _ = model.predict(obs)
     obs, reward, done, info = test_env.step(action)
     episode_rewards.append(reward)
-    df_equity_last = df_equity_last.append({ 'Last test Equity': test_env.get_attr('equity')[0]}, ignore_index=True)
+    df_equity_last = pd.concat([df_equity_last, pd.DataFrame({'Last test Equity': [test_env.get_attr('equity')[0]]})], ignore_index=True)
     #print('Action:', action, 'Reward:', reward, 'Equity:', test_env.get_attr('equity')[0])
 
 cumulative_profit = test_env.get_attr('equity')[0] - test_env.get_attr('initial_balance')[0]
@@ -289,7 +290,7 @@ def real_time_trading(model):
     
     while True:
         # Получение свежих данных
-        klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1HOUR, "1 Jan, 2020", str(datetime.now().date()))
+        klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1DAY, "1 Jan, 2023", str(datetime.now().date()))
         df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         df.set_index('timestamp', inplace=True)
@@ -331,4 +332,4 @@ def real_time_trading(model):
         time.sleep(60)
 
 
-real_time_trading(updated_model)
+real_time_trading(model)
