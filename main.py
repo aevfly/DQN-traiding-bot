@@ -9,7 +9,6 @@ import os
 api_key = ''
 api_secret = ''
 client = Client(api_key, api_secret)
-
 filename = 'btcusdt_2018_2020_1h.csv'
 if not os.path.isfile(filename):
     klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1HOUR, "1 Jan, 2018", "1 Mar, 2020")
@@ -33,7 +32,7 @@ df['upper_band'], df['middle_band'], df['lower_band'] = talib.BBANDS(df['close']
 class BinanceEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, data, window_size=80):
+    def __init__(self, data, window_size=40):
         super(BinanceEnv, self).__init__()
         self.data = data
         self.window_size = window_size
@@ -287,8 +286,14 @@ def real_time_trading(model):
     sell = False
     btc = 0
     usdt = 1000
+    sold_price = 1
+    time_buy = str(datetime.datetime.now().date())
+    time_to_buy = True
     
     while True:
+        # Получение текущего времени
+        current_time = datetime.datetime.now().time()
+
         # Получение свежих данных
         klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1DAY, "1 Jan, 2023", str(datetime.now().date()))
         df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
@@ -313,23 +318,34 @@ def real_time_trading(model):
 
         # Получение текущей цены
         current_price = df['close'].iloc[-1]
-        if(action == 0 and sell == False ):
-                btc = 200 / float(current_price)
+        if(action == 0 and sell == False and time_to_buy == True ):
+                btc = 100 / float(current_price)
                 buy_price = current_price
-                usdt = usdt-200
+                sold_price = current_price
+                usdt = usdt-100
                 sell = True 
+                time_to_buy = False
         
-        elif(action == 1 and sell == True and (current_price >= buy_price + buy_price*0.02)):
+        elif(action == 1 and sell == True and (current_price >= sold_price)):
                 usdt = usdt + current_price * btc
                 btc = 0
                 sell = False
         
+        if(current_price > sold_price):
+            sold_price = current_price 
 
         # Вывод информации о текущей цене и предсказанном действии
-        print(f"Current price: {current_price}, predicted action: {action},  buy_price: { buy_price + buy_price*0.02}")
+        print(f"Current price: {current_price}, predicted action: {action},  sold_price: {sold_price}, % : {buy_price + buy_price*0.02}")
 
+        # Открываем возможность для покупки каждый час
+        if current_time.minute == 0 and current_time.second == 0 and usdt > 0:
+            # Изменение флага time_to_buy на True
+            time_to_buy = True
+            print("Открытие для покупки")
+            
         # Задержка перед следующим обновлением данных (например, 60 секунд)
         time.sleep(60)
 
 
 real_time_trading(model)
+
